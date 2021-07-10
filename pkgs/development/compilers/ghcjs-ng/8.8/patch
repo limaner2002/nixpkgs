@@ -1,0 +1,13 @@
+diff --git a/test/TestRunner.hs b/test/TestRunner.hs
+index aa449eb..441a2e7 100644
+--- a/test/TestRunner.hs
++++ b/test/TestRunner.hs
+@@ -85,7 +85,7 @@ main = shellyE . silently . withTmpDir $ liftIO . setupTests
+ showParseError :: ParseError -> String
+ showParseError (ErrorMsg xs)          = "error: " ++ xs
+ showParseError (InfoMsg xs)           = "info: " ++ xs
+-showParseError ShowHelpText           = "help!"
++showParseError (ShowHelpText _)           = "help!"
+ showParseError UnknownError           = "unknown"
+ showParseError (MissingError {})      = "missing"
+ showParseError (ExpectsArgError xs)   = "expecting argument: " ++ xs

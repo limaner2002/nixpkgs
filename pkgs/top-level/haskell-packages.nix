@@ -6,6 +6,7 @@ let
     "ghc865Binary"
     "ghc8102Binary"
     "ghc8102BinaryMinimal"
+    "ghcjs88"
     "integer-simple"
     "native-bignum"
     "ghcHEAD"
@@ -65,6 +66,14 @@ in {
       buildLlvmPackages = buildPackages.llvmPackages_7;
       llvmPackages = pkgs.llvmPackages_7;
     };
+
+    ghcjs88 = callPackage ../development/compilers/ghcjs-ng {
+      bootPkgs = packages.ghc884;
+      ghcjsSrcJson = ../development/compilers/ghcjs-ng/8.8/git.json;
+      stage0 = ../development/compilers/ghcjs-ng/8.8/stage0.nix;
+      ghcjsDepOverrides = callPackage ../development/compilers/ghcjs-ng/8.8/dep-overrides.nix { fetchpatch = pkgs.fetchpatch; };
+    };
+
     ghc8104 = callPackage ../development/compilers/ghc/8.10.4.nix {
       # aarch64 ghc865Binary gets SEGVs due to haskell#15449 or similar
       bootPkgs = if stdenv.isAarch64 || stdenv.isAarch32 then
@@ -157,6 +166,11 @@ in {
       buildHaskellPackages = bh.packages.ghcHEAD;
       ghc = bh.compiler.ghcHEAD;
       compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-head.nix { };
+    };
+    ghcjs88 = callPackage ../development/haskell-modules rec {
+      buildHaskellPackages = ghc.bootPkgs;
+      ghc = bh.compiler.ghcjs88;
+      compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-8.8.x.nix { };
     };
 
     # The integer-simple attribute set contains package sets for all the GHC compilers

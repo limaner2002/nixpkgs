@@ -1,0 +1,50 @@
+diff --git a/ghc/aclocal.m4 b/ghc/aclocal.m4
+index 41cecf098b..03201a40be 100644
+--- a/ghc/aclocal.m4
++++ b/ghc/aclocal.m4
+@@ -613,7 +613,7 @@ AC_DEFUN([FP_SET_CFLAGS_C99],
+     CPPFLAGS="$$3"
+     unset ac_cv_prog_cc_c99
+     dnl perform detection
+-    _AC_PROG_CC_C99
++    AC_PROG_CC_C99
+     fp_cc_c99="$ac_cv_prog_cc_c99"
+     case "x$ac_cv_prog_cc_c99" in
+       x)   ;; # noop
+diff --git a/ghc/compiler/hsSyn/Convert.hs b/ghc/compiler/hsSyn/Convert.hs
+index 3853f6a013..1a801bb1b1 100644
+--- a/ghc/compiler/hsSyn/Convert.hs
++++ b/ghc/compiler/hsSyn/Convert.hs
+@@ -1811,8 +1811,8 @@ thRdrName loc ctxt_ns th_occ th_name
+   = case th_name of
+      TH.NameG th_ns pkg mod -> thOrigRdrName th_occ th_ns pkg mod
+      TH.NameQ mod  -> (mkRdrQual  $! mk_mod mod) $! occ
+-     TH.NameL uniq -> nameRdrName $! (((Name.mkInternalName $! mk_uniq (fromInteger uniq)) $! occ) loc)
+-     TH.NameU uniq -> nameRdrName $! (((Name.mkSystemNameAt $! mk_uniq (fromInteger uniq)) $! occ) loc)
++     TH.NameL uniq -> nameRdrName $! (((Name.mkInternalName $! mk_uniq uniq) $! occ) loc)
++     TH.NameU uniq -> nameRdrName $! (((Name.mkSystemNameAt $! mk_uniq uniq) $! occ) loc)
+      TH.NameS | Just name <- isBuiltInOcc_maybe occ -> nameRdrName $! name
+               | otherwise                           -> mkRdrUnqual $! occ
+               -- We check for built-in syntax here, because the TH
+diff --git a/ghc/compiler/typecheck/TcSplice.hs b/ghc/compiler/typecheck/TcSplice.hs
+index ec2ebb1b3e..b621cd66db 100644
+--- a/ghc/compiler/typecheck/TcSplice.hs
++++ b/ghc/compiler/typecheck/TcSplice.hs
+@@ -919,7 +919,7 @@ To call runQ in the Tc monad, we need to make TcM an instance of Quasi:
+ 
+ instance TH.Quasi TcM where
+   qNewName s = do { u <- newUnique
+-                  ; let i = toInteger (getKey u)
++                  ; let i = getKey u
+                   ; return (TH.mkNameU s i) }
+ 
+   -- 'msg' is forced to ensure exceptions don't escape,
+@@ -2037,7 +2037,7 @@ reifyName :: NamedThing n => n -> TH.Name
+ reifyName thing
+   | isExternalName name
+               = mk_varg pkg_str mod_str occ_str
+-  | otherwise = TH.mkNameU occ_str (toInteger $ getKey (getUnique name))
++  | otherwise = TH.mkNameU occ_str (getKey $ getUnique name)
+         -- Many of the things we reify have local bindings, and
+         -- NameL's aren't supposed to appear in binding positions, so
+         -- we use NameU.  When/if we start to reify nested things, that

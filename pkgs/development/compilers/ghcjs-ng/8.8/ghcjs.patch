@@ -1,0 +1,99 @@
+diff --git a/lib/boot/boot.yaml b/lib/boot/boot.yaml
+index 8c1e529..7a2f2b1 100644
+--- a/lib/boot/boot.yaml
++++ b/lib/boot/boot.yaml
+@@ -80,4 +80,5 @@ programs:
+   alex:       alex
+   happy:      happy
+   git:        git
++  emcc:       emcc
+   autoreconf: autoreconf
+diff --git a/src-bin/Boot.hs b/src-bin/Boot.hs
+index b008ba6..a1225b6 100644
+--- a/src-bin/Boot.hs
++++ b/src-bin/Boot.hs
+@@ -189,6 +189,7 @@ data BootPrograms = BootPrograms { _bpGhc        :: Program
+                                  , _bpGhcPkg     :: Program
+                                  , _bpCabal      :: Program
+                                  , _bpNode       :: Program
++                                 , _bpEmsdk      :: Program
+                                  } deriving (Data, Typeable, Show)
+ 
+ data BootEnv = BootEnv { _beSettings  :: BootSettings
+@@ -239,6 +240,7 @@ instance Yaml.FromJSON BootPrograms where
+   parseJSON (Yaml.Object v) = BootPrograms
+     <$> v ..: "ghc"   <*> v ..: "ghc-pkg"
+     <*> v ..: "cabal" <*> v ..: "node"
++    <*> v ..: "emcc"
+     where
+       o ..: p = ((\t -> Program p t Nothing Nothing []) <$> o .: p) <|>
+                 (withArgs p =<< o .: p)
+@@ -594,8 +596,8 @@ installFakes = do
+                                      ]
+             version = T.drop (T.length pkg + 1) pkgVer
+         globalDB <- view (beLocations . blGlobalDB)
+-        pkgAbi <- getField "abi"
+-        pkgId  <- getField "id"
++        pkgAbi <- T.strip <$> getField "abi"
++        pkgId  <- T.strip <$> getField "id"
+         libDir <- libDir <$> view beLocations
+         let conf = fakeConf libDir libDir pkg version pkgId pkgAbi
+         liftIO $ T.writeFile (globalDB </> T.unpack pkgId <.> "conf") conf
+@@ -807,7 +809,7 @@ cabalGlobalFlags = do
+   instDir  <- libDir <$> view beLocations
+   return ["--config-file"
+          ,T.pack (instDir </> "cabalBootConfig")
+-         ,"--ignore-sandbox"
++
+          ]
+ 
+ cabalInstallFlags :: Bool -> B [Text]
+@@ -815,9 +817,12 @@ cabalInstallFlags parmakeGhcjs = do
+   debug    <- view (beSettings . bsDebug)
+   v        <- view (beSettings . bsVerbosity)
+   j        <- view (beSettings . bsJobs)
++  ghcjs    <- view (bePrograms . bpGhc)
++  ghcjsPkg <- view (bePrograms . bpGhcPkg)
+   instDir  <- libDir <$> view beLocations
+   prof     <- view (beSettings . bsProf)
+   haddock  <- view (beSettings . bsHaddock)
++  emsdk    <- view (bePrograms . bpEmsdk)
+   locs     <- view beLocations
+   let binDir        = (locs ^. blGhcjsTopDir) </> "bin"
+       privateBinDir = instDir </> "bin"
+@@ -826,10 +831,10 @@ cabalInstallFlags parmakeGhcjs = do
+            , "--one-shot"
+            , "--avoid-reinstalls"
+            , "--builddir",      "dist"
+-           , "--with-compiler", (T.pack $ binDir </> "ghcjs")
+-           , "--with-hc-pkg",   (T.pack $ binDir </> "ghcjs-pkg")
++           , "--with-compiler", ghcjs ^. pgmLocText
++           , "--with-hc-pkg",   ghcjsPkg ^. pgmLocText
+            , "--with-haddock",  (T.pack $ binDir </> "haddock")
+-           , "--with-gcc",      (T.pack $ privateBinDir </> "emcc")
++           , "--with-gcc",      emsdk ^. pgmLocText
+            , "--prefix",        T.pack (locs ^. blGhcjsTopDir)
+            , bool haddock "--enable-documentation" "--disable-documentation"
+            , "--configure-option", "--host=wasm32-unknown-none"
+@@ -1095,6 +1100,8 @@ configureBootPrograms bs pgms0 = do
+       tp    = template :: Traversal' BootPrograms Program
+       pgms2 = pgms0 & bpCabal    %~ r bsWithCabal
+                     & bpNode     %~ r bsWithNode
++                    & bpGhc      %~ r bsWithGhc
++                    & bpGhcPkg   %~ r bsWithGhcPkg
+   -- resolve all programs
+   pgms3 <- mapMOf tp (resolveProgram bs)
+              =<< mapMOf tp (resolveProgram bs) pgms2
+diff --git a/test/TestRunner.hs b/test/TestRunner.hs
+index aa449eb..441a2e7 100644
+--- a/test/TestRunner.hs
++++ b/test/TestRunner.hs
+@@ -85,7 +85,7 @@ main = shellyE . silently . withTmpDir $ liftIO . setupTests
+ showParseError :: ParseError -> String
+ showParseError (ErrorMsg xs)          = "error: " ++ xs
+ showParseError (InfoMsg xs)           = "info: " ++ xs
+-showParseError ShowHelpText           = "help!"
++showParseError (ShowHelpText _)           = "help!"
+ showParseError UnknownError           = "unknown"
+ showParseError (MissingError {})      = "missing"
+ showParseError (ExpectsArgError xs)   = "expecting argument: " ++ xs
