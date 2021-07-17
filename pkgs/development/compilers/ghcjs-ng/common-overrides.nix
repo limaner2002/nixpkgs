@@ -1,6 +1,6 @@
 { haskellLib }:
 
-let inherit (haskellLib) addBuildTools appendConfigureFlag dontHaddock doJailbreak;
+let inherit (haskellLib) addBuildTools appendConfigureFlag dontHaddock doJailbreak dontCheck;
 in self: super: {
   ghcjs = dontHaddock (appendConfigureFlag (doJailbreak super.ghcjs) "-fno-wrapper-install");
   haddock-library-ghcjs = dontHaddock super.haddock-library-ghcjs;

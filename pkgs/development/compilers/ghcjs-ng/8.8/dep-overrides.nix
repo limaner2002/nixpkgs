@@ -7,7 +7,7 @@ let inherit (haskellLib) doJailbreak dontHaddock dontCheck;
         name = "happy-1.19.11.patch";
       };
 in self: super: {
-  # Use specific version of happy. TODO: Try renaming `GhcPrelude` to `Prelude` and see if everything stays broken.
+  # Use specific version of happy.
   # https://gitlab.haskell.org/ghc/ghc/-/issues/19603
   happy = self.happy_1_19_11.overrideAttrs (_: {
     patches = ./happy.patch;

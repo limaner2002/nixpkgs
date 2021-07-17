@@ -1,3 +1,16 @@
+diff --git a/ghcjs.cabal b/ghcjs.cabal
+index a1c26e3..822d80a 100644
+--- a/ghcjs.cabal
++++ b/ghcjs.cabal
+@@ -220,8 +220,6 @@ Library
+     if flag(runtime-assertions)
+       cpp-options: -DRUNTIME_ASSERTIONS
+ 
+-    build-tool-depends: happy:happy >= 1.19
+-
+     Build-Depends: base       >= 4.9 && < 5,
+                    deepseq    >= 1.4 && < 1.5,
+                    directory  >= 1   && < 1.4,
 diff --git a/lib/boot/boot.yaml b/lib/boot/boot.yaml
 index 8c1e529..7a2f2b1 100644
 --- a/lib/boot/boot.yaml
@@ -8,6 +21,19 @@ index 8c1e529..7a2f2b1 100644
    git:        git
 +  emcc:       emcc
    autoreconf: autoreconf
+diff --git a/lib/ghc/autogen/Config.hs b/lib/ghc/autogen/Config.hs
+index e331d71..2f37567 100644
+--- a/lib/ghc/autogen/Config.hs
++++ b/lib/ghc/autogen/Config.hs
+@@ -21,7 +21,7 @@ cProjectName          = "The Glorious Glasgow Haskell Compilation System"
+ cProjectGitCommitId   :: String
+ cProjectGitCommitId   = "dc8b78fc7ecb616ab535a03b4410f610ef8dd3d0"
+ cProjectVersion       :: String
+-cProjectVersion       = "8.8.1.20200101"
++cProjectVersion       = "8.8.4"
+ cProjectVersionInt    :: String
+ cProjectVersionInt    = "808"
+ cProjectPatchLevel    :: String
 diff --git a/src-bin/Boot.hs b/src-bin/Boot.hs
 index b008ba6..a1225b6 100644
 --- a/src-bin/Boot.hs
@@ -84,6 +110,37 @@ index b008ba6..a1225b6 100644
    -- resolve all programs
    pgms3 <- mapMOf tp (resolveProgram bs)
               =<< mapMOf tp (resolveProgram bs) pgms2
+diff --git a/src/Compiler/Info.hs b/src/Compiler/Info.hs
+index 7d2843e..a92b7fa 100644
+--- a/src/Compiler/Info.hs
++++ b/src/Compiler/Info.hs
+@@ -72,20 +72,23 @@ getUserCacheDir = fmap (</> "cache") <$> getUserTopDir
+ getGhcCompilerVersion :: String
+ getGhcCompilerVersion = cProjectVersion
+ 
++hardCodedVersion :: Version.Version
++hardCodedVersion = Version.Version [8,8,4] []
++
+ -- | GHCJS-GHC
+ getFullCompilerVersion :: [Char]
+-getFullCompilerVersion = Version.showVersion Paths_ghcjs.version ++
++getFullCompilerVersion = Version.showVersion hardCodedVersion ++
+                          "-" ++
+                          getGhcCompilerVersion
+ 
+ -- | Just the GHCJS version
+ getCompilerVersion :: String
+-getCompilerVersion = Version.showVersion Paths_ghcjs.version
++getCompilerVersion = Version.showVersion hardCodedVersion
+ 
+ -- | version in GHC format, e.g. 7.8.2 -> 708
+ getShortCompilerVersion :: String
+ getShortCompilerVersion =
+-  case Version.versionBranch Paths_ghcjs.version of
++  case Version.versionBranch hardCodedVersion of
+     []      -> "0"
+     [x]     -> show (100 * x)
+     (x:y:_) -> show (100 * x + min 99 y)
 diff --git a/test/TestRunner.hs b/test/TestRunner.hs
 index aa449eb..441a2e7 100644
 --- a/test/TestRunner.hs
@@ -97,3 +154,35 @@ index aa449eb..441a2e7 100644
  showParseError UnknownError           = "unknown"
  showParseError (MissingError {})      = "missing"
  showParseError (ExpectsArgError xs)   = "expecting argument: " ++ xs
+diff --git a/utils/makePackages.sh b/utils/makePackages.sh
+index 2abb260..d9bfa1e 100755
+--- a/utils/makePackages.sh
++++ b/utils/makePackages.sh
+@@ -1,5 +1,10 @@
+ #!/usr/bin/env bash
+-# set -euo pipefail
++
++# We set bash in a strict mode so that errors are not silently
++# discarded. See the gist in the link below for an explanation for why
++# this is good and what each of the arguments does.
++# https://gist.github.com/mohanpedala/1e2ff5661761d3abd0385e8223e16425
++set -euxo pipefail
+ 
+ # pull the code for GHCJS dependencies from the GHC tree in
+ #   lib/ghc
+@@ -167,11 +172,12 @@ copy_patch_boot_package_sdist() {
+   # collect the files of the upstream package by making a source distribution
+   (
+   cd "$PKGSRC"
+-  rm -f "dist-install/$PKG-*.tar.gz"
+-  cabal "${CMDPREFIX}sdist" --builddir=dist-install
++  # TODO: check if the `v1-` prefix is actually supported by cabal-install-3.4.0.0
++  cabal "sdist" --builddir=dist-install
+   )
+   # unpack the source distribution
+-  for SRCDISTTMP in $PKGSRC/dist-install/$PKG-*.tar.gz; do
++  # TODO: Figure out if the reason 'sdist' is added here is due to cabal-install-3.4.0
++  for SRCDISTTMP in $GHCSRC/libraries/${PKG}/dist-install/sdist/$PKG-*.tar.gz; do
+     SRCDIST="$SRCDISTTMP"
+   done
+   (

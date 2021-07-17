@@ -169,7 +169,7 @@ in {
     };
     ghcjs88 = callPackage ../development/haskell-modules rec {
       buildHaskellPackages = ghc.bootPkgs;
-      ghc = bh.compiler.ghcjs88;
+      ghc = bh.compiler.ghcjs88.ghcjs;
       compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-8.8.x.nix { };
     };
 
