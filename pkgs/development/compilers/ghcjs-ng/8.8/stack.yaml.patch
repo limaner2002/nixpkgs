@@ -1,0 +1,12 @@
+diff --git a/stack.yaml b/stack.yaml
+index ecdea99..3e82945 100644
+--- a/stack.yaml
++++ b/stack.yaml
+@@ -1,6 +1,7 @@
+ resolver: lts-15.0
+ packages:
+   - .
++  - ./lib/ghcjs-th
+ 
+ local-bin-path: inplace/bin
+ 

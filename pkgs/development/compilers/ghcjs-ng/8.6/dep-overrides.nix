@@ -7,7 +7,7 @@ in self: super: {
   };
   ghc-api-ghcjs = super.ghc-api-ghcjs.override
   {
-    happy = self.happy_1_19_5;
+    happy = self.happy_1_19_11;
   };
   haddock-library-ghcjs = doJailbreak (dontCheck super.haddock-library-ghcjs);
   haddock-api-ghcjs = doJailbreak (dontHaddock super.haddock-api-ghcjs);

@@ -12,9 +12,9 @@ Updating
 ---
 
 ```
-$ nix-prefetch-git https://github.com/ghcjs/ghcjs --rev refs/heads/ghc-8.4 \
+$ nix-prefetch-git https://github.com/ghcjs/ghcjs --fetch-submodules --rev refs/heads/ghc-8.8 \
   | jq '{ url, rev, fetchSubmodules, sha256 }' \
-  > 8.4/git.json
+  > 8.8/git.json
 $ cat $(nix-build ../../../.. -A haskell.compiler.ghcjs82.genStage0 --no-out-link) > 8.4/stage0.nix
 $ cabal2nix --compiler ghcjs git://github.com/ghcjs/ghcjs-base > ghcjs-base.nix
 ```

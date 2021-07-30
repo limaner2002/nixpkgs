@@ -32,7 +32,16 @@ let configuredSrc = callPackage ./configured-ghcjs-src.nix {
               in base.overrideAttrs (_:
                 { nativeBuildInputs = [ hself.alex
                                         hself.happy
+                                        makeWrapper
+                                        xorg.lndir
                                       ];
+                  postInstall = ''
+                    mkdir -p $out/lib/${hself.ghcjs.name}
+                    lndir ${hself.ghc}/lib/${hself.ghc.name} $out/lib/${hself.ghcjs.name}
+
+                    wrapProgram $out/bin/ghcjs --add-flags "-B$out/lib/${hself.ghcjs.name}"
+                    wrapProgram $out/bin/ghcjs-pkg --add-flags "--global-package-db=$out/lib/${hself.ghcjs.name}/package.conf.d"
+                  '';
                 });
             ghcjs-boot = haskellLib.setBuildTarget ghcjs "ghcjs-boot";
               # let base = hself.callPackage "${configuredSrc}" { };
@@ -65,7 +74,6 @@ let configuredSrc = callPackage ./configured-ghcjs-src.nix {
       ]);
       ghcjs = boot.ghcjs;
       ghcjs-boot = boot.ghcjs-boot;
-      boot-prim = boot.callPackage ./8.8/ghc-prim.nix { inherit configuredSrc; };
       devShell = boot.shellFor
         { packages = hp: [ hp.ghcjs
                          ];
@@ -74,6 +82,7 @@ let configuredSrc = callPackage ./configured-ghcjs-src.nix {
                           nodejs
                         ];
         };
+      boot-prim = boot.callPackage ./8.8/ghc-prim.nix { inherit configuredSrc; };
       bootGhc = boot.ghcWithPackages (hp: [ hp.ghcjs ] );
       bootDrv = stdenv.mkDerivation {
         name = boot.ghcjs.name;
@@ -110,11 +119,11 @@ let configuredSrc = callPackage ./configured-ghcjs-src.nix {
           # $out/bin/ghcjs-pkg recache
           # Full logs
           # nix log /nix/store/15k6arvw77xyxagzx5nzr3jji20yrc2b-ghcjs-8.8.0.0.1.drv
-          cd $rootdir/lib/boot
-          env PATH=out/bin:$PATH $out/bin/ghcjs-boot -j1 --with-ghc $out/bin/ghcjs --with-ghc-pkg $out/bin/ghcjs-pkg
+          # cd $rootdir/lib/boot
+          # env PATH=out/bin:$PATH $out/bin/ghcjs-boot -j1 --with-ghc $out/bin/ghcjs --with-ghc-pkg $out/bin/ghcjs-pkg
 
-          # cd $rootdir/lib/boot/pkg/ghc-prim
-          # cabal install all:libs --avoid-reinstalls --lib --builddir dist --prefix $out --one-shot --with-compiler $out/bin/ghcjs --with-hc-pkg $out/bin/ghcjs-pkg --allow-boot-library-installs --package-db=$out/lib/${boot.ghcjs.name}/package.conf.d
+          cd $rootdir/lib/boot/pkg/ghc-prim
+          cabal v1-install ./ghc-prim.cabal --force-reinstalls --builddir dist --prefix $out --one-shot --with-compiler $out/bin/ghcjs --with-hc-pkg $out/bin/ghcjs-pkg --allow-boot-library-installs --package-db=$out/lib/${boot.ghcjs.name}/package.conf.d --ghcjs --global
         '';
         nativeBuildInputs = [ bootGhc
                               boot.cabal-install
